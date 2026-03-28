@@ -11,7 +11,6 @@ services:
     container_name: tod-bot
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - TOD_STORAGE=sqlite
       - TZ=UTC
     volumes:
       - ./data:/app/data
@@ -35,23 +34,23 @@ docker compose up -d
 TodBot is a lightweight Discord bot to record boss Time of Death (ToD), show respawn windows, and post reminders when a window opens and closes.
 
 ### Features
-- Commands: `.init`, `.tod`, `.window` / `.w`, `.del`, `.list` / `.ls` / `.all`
+- Commands: `.init`, `.tod`, `.window` / `.w`, `.del`, `.list` / `.ls` / `.all`, `.remind`, `.reminders`
 - Per-channel registration via `.init` — the bot ignores unregistered channels
 - Per-channel language chosen during `.init` (English, Russian, French, Greek, Portuguese, Ukrainian)
+- Configurable reminders — off by default per-channel; enable for all bosses with `.reminders on` or request a one-time alert for a specific boss with `.remind BossName`
 - Configurable respawn windows — global defaults via env vars, per-boss overrides via `config/bosses.yaml`
 - Partial/alias boss name matching — `taras` → `antharas`, `tezza` → `frintezza`, `aq` / `qa` → `queen ant`
 - Epic boss windows pre-configured (Queen Ant 24+4h, Antharas 192+4h, Valakas 264+4h, etc.)
-- Automatic reminders at window open and window close
 - User-local time display using Discord dynamic timestamps
 - Auto-deletes the invoking user message after handling (if the bot has permissions)
-- Storage backends: JSON (default), SQLite, or MySQL
+- Storage backends: JSON (default) or MySQL
 - Multi-server / multi-channel support with isolated data per channel
 
 ### Requirements
 - Native run:
   - PHP 8.4 or newer
   - Composer
-  - `pdo_sqlite` extension for SQLite backend; `pdo_mysql` for MySQL
+  - `pdo_mysql` extension for MySQL backend
 - Docker run:
   - Docker Engine 24 or newer
 
@@ -76,10 +75,10 @@ TodBot is a lightweight Discord bot to record boss Time of Death (ToD), show res
 
 #### Using the Makefile (simplest)
 
-SQLite (default):
+JSON (default):
 ```
 export DISCORD_TOKEN=your_token
-make up        # builds image and starts bot with SQLite
+make up        # builds image and starts bot with JSON storage
 ```
 
 MySQL:
@@ -90,16 +89,16 @@ make mysql-up  # creates .env if missing, builds image, starts MySQL + bot
 
 Other useful targets:
 ```
-make logs        # follow SQLite bot logs
+make logs        # follow bot logs
 make mysql-logs  # follow MySQL bot logs
 make mysql-db    # open MySQL shell in the db container
 make shell       # open shell in the bot container
-make down        # stop SQLite stack
+make down        # stop default stack
 make mysql-down  # stop MySQL stack
 make test        # run PHPUnit tests locally
 ```
 
-#### Manual Docker Compose (SQLite)
+#### Manual Docker Compose (JSON)
 
 ```yaml
 services:
@@ -108,7 +107,6 @@ services:
     container_name: tod-bot
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - TOD_STORAGE=sqlite
       - TZ=UTC
     volumes:
       - ./data:/app/data
@@ -135,7 +133,6 @@ docker compose -f docker-compose.mysql.yml up -d --build
 docker build -t tod-bot:latest .
 docker run -d --name tod-bot \
   -e DISCORD_TOKEN=your_token \
-  -e TOD_STORAGE=sqlite \
   -e TZ=UTC \
   -v "$(pwd)/data:/app/data" \
   --restart unless-stopped \
@@ -147,8 +144,7 @@ docker run -d --name tod-bot \
 | Variable | Default | Description |
 |---|---|---|
 | `DISCORD_TOKEN` | — | **Required.** Your Discord bot token |
-| `TOD_STORAGE` | `json` | Storage backend: `json`, `sqlite`, or `mysql` |
-| `TOD_SQLITE` | `./data/tods.sqlite` | Path to SQLite file (SQLite backend only) |
+| `TOD_STORAGE` | `json` | Storage backend: `json` or `mysql` |
 | `TOD_WINDOW_START` | `12` | Default window start offset in hours |
 | `TOD_WINDOW_RANDOM` | `9` | Default window random range in hours (`start + random = end`) |
 | `BOSS_CONFIG` | `config/bosses.yaml` | Path to boss config YAML for custom windows and aliases |
@@ -162,7 +158,6 @@ docker run -d --name tod-bot \
 
 ### Data files
 - JSON: `./data/tods.json`, `./data/channels.json`
-- SQLite: `./data/tods.sqlite` (stores both ToDs and channel config)
 - MySQL: tables `tods` and `channels` (auto-created on first start)
 
 ### Discord permissions
@@ -179,11 +174,13 @@ Registers the current channel with the bot. The bot will not respond to any comm
 
 Steps:
 1. Run `.init` in the channel.
-2. The bot replies with a numbered language menu — send the number for your language.
-3. The bot asks for confirmation — reply `yes` to complete registration.
+2. The bot replies with a numbered language menu — send the number or code for your language.
+3. The bot asks for confirmation — reply `yes` or `no`.
+4. The bot asks whether to enable automatic reminders for all bosses — reply `yes` or `no`.
 
 #### `.tod <boss> [time] [timezone]`
 Sets ToD for a boss. If time is omitted, now is used. If timezone is omitted, UTC is used.
+Re-recording a boss resets any pending one-time reminder set with `.remind`.
 
 Examples:
 ```
@@ -210,6 +207,16 @@ Deletes the stored ToD.
 #### `.list` (aliases: `.ls`, `.all`, `.список`)
 Lists bosses for the current channel whose window has not yet closed.
 Shows "opens in …" for upcoming windows and "closes in …" for active ones.
+
+#### `.remind <boss>`
+Requests a one-time window-open reminder for a specific boss.
+Only useful when channel reminders are off — the bot will notify once when the window opens, then clear the flag.
+If the boss is re-recorded with `.tod` before the window opens, the flag is reset and must be set again.
+
+#### `.reminders on|off`
+Enables or disables automatic reminders for **all bosses** in this channel.
+- `on` — bot notifies when every boss window opens and closes.
+- `off` — no automatic reminders (use `.remind BossName` for one-time alerts).
 
 ### Accepted time formats
 - `now`
@@ -272,16 +279,16 @@ Each channel has its own ToD list, reminders, and language. Data from different 
 - Entry point: `bin/bot.php`
 - Key classes:
   - `src/Bot/DiscordBot.php` — bootstraps Discord client, wires events, routes messages
-  - `src/Service/InitHandler.php` — multi-step channel registration state machine
+  - `src/Service/InitHandler.php` — three-step channel registration state machine (language → confirm → reminders)
   - `src/Service/CommandHandler.php` — parses and responds to commands
   - `src/Service/ReminderScheduler.php` — 60s periodic checks to post start/end reminders
   - `src/Service/BossRegistry.php` — canonical name resolution and window lookup
   - `src/Service/TimeParser.php` — parses flexible time inputs into UTC
   - `src/Service/TimeFormatter.php` — formats Discord timestamp tokens
-  - `src/Repository/` — JSON, SQLite, and MySQL backends implementing repository interfaces
+  - `src/Repository/` — JSON and MySQL backends implementing repository interfaces
 - Storage schema:
-  - `tods` table/file: primary key is `boss + channel_id`; flags `start_reminded`, `end_reminded`
-  - `channels` table/file: primary key is `channel_id`; stores `guild_id`, `locale`
+  - `tods` table/file: primary key is `boss + channel_id`; flags `start_reminded`, `end_reminded`, `remind`
+  - `channels` table/file: primary key is `channel_id`; stores `guild_id`, `guild_name`, `channel_name`, `locale`, `reminders_enabled`
 
 ### Testing
 ```
@@ -293,7 +300,6 @@ make test              # alias
 - `DISCORD_TOKEN is not set` — run `export DISCORD_TOKEN=your_token` or set it in `.env`
 - Bot does not respond — the channel must be registered with `.init` first
 - Bot does not delete user messages — grant Manage Messages permission
-- SQLite errors (native) — enable `pdo_sqlite` or use the Docker image
 - MySQL errors — ensure `MYSQL_*` env vars are set and the MySQL container is healthy
-- No reminders — the scheduler ticks every 60 seconds; ensure the bot can send messages in the channel
+- No reminders — check that reminders are enabled (`.reminders on`) or use `.remind BossName` for a one-time alert; the scheduler ticks every 60 seconds
 - Time parsing failed — the bot will respond with examples; try another format or specify a timezone

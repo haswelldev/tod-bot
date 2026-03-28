@@ -1,6 +1,6 @@
 .PHONY: build up down restart logs shell mysql-up mysql-down mysql-logs mysql-shell mysql-db test
 
-# SQLite stack (default for local dev) ----------------------------------------
+# Default (JSON) stack ---------------------------------------------------------
 
 build:
 	docker compose build

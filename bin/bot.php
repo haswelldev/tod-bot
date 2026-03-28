@@ -9,8 +9,6 @@ use TodBot\Repository\JsonChannelConfigRepository;
 use TodBot\Repository\JsonTodRepository;
 use TodBot\Repository\MysqlChannelConfigRepository;
 use TodBot\Repository\MysqlTodRepository;
-use TodBot\Repository\SqliteChannelConfigRepository;
-use TodBot\Repository\SqliteTodRepository;
 
 $config = new Config();
 
@@ -19,7 +17,7 @@ if (!$config->getToken()) {
     exit(1);
 }
 
-// Select storage backend based on env TOD_STORAGE (json|sqlite|mysql)
+// Select storage backend based on env TOD_STORAGE (json|mysql)
 $driver = $config->getStorageDriver();
 if ($driver === 'mysql') {
     $dsn               = $config->getMysqlDsn();
@@ -27,9 +25,6 @@ if ($driver === 'mysql') {
     $password          = $config->getMysqlPassword();
     $repo              = new MysqlTodRepository($dsn, $user, $password);
     $channelConfigRepo = new MysqlChannelConfigRepository($dsn, $user, $password);
-} elseif ($driver === 'sqlite') {
-    $repo              = new SqliteTodRepository($config->getSqliteFile());
-    $channelConfigRepo = new SqliteChannelConfigRepository($config->getSqliteFile());
 } else {
     $repo              = new JsonTodRepository($config->getTodFile());
     $channelConfigRepo = new JsonChannelConfigRepository($config->getChannelsFile());

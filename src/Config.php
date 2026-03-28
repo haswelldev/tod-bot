@@ -7,7 +7,6 @@ class Config
     private $token;
     private $todFile;
     private $storageDriver;
-    private $sqliteFile;
     private int $defaultWindowStart;
     private int $defaultWindowRandom;
     private string $bossConfigPath;
@@ -25,10 +24,6 @@ class Config
 
         $envStorage = getenv('TOD_STORAGE');
         $this->storageDriver = $envStorage ? strtolower($envStorage) : 'json';
-
-        $defaultSqlite = dirname(__DIR__) . '/data/tods.sqlite';
-        $envSqlite = getenv('TOD_SQLITE');
-        $this->sqliteFile = $envSqlite ?: $defaultSqlite;
 
         $envStart = getenv('TOD_WINDOW_START');
         $this->defaultWindowStart = $envStart !== false ? (int) $envStart : 12;
@@ -62,11 +57,6 @@ class Config
     public function getStorageDriver(): string
     {
         return $this->storageDriver;
-    }
-
-    public function getSqliteFile(): false|array|string
-    {
-        return $this->sqliteFile;
     }
 
     public function getDefaultWindowStart(): int
