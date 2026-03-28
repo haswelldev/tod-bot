@@ -27,4 +27,10 @@ return [
     'reminder.end.title' => '⚠️ Окно респа закрылось: %boss%',
     'reminder.start.field' => 'Начало окна:',
     'reminder.end.field' => 'Конец окна: ',
+
+    'remind.set.title' => '🔔 Разовое напоминание установлено: %boss%',
+
+    'reminders.on' => '🔔 Напоминания для канала включены.',
+    'reminders.off' => '🔕 Напоминания для канала отключены.',
+    'reminders.usage' => 'Использование: `.reminders on` или `.reminders off`',
 ];

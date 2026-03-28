@@ -9,15 +9,23 @@ use React\Promise\Promise;
 // Fakes
 // ---------------------------------------------------------------------------
 
+class InitFakeGuild
+{
+    public string $name = 'test-guild';
+}
+
 class InitFakeChannel
 {
     public int $sendCount = 0;
     public ?string $lastPayload = null;
+    public string $name = 'test-channel';
+    public ?InitFakeGuild $guild = null;
     private string $id;
 
     public function __construct(string $id = 'init-channel')
     {
-        $this->id = $id;
+        $this->id    = $id;
+        $this->guild = new InitFakeGuild();
     }
 
     public function id(): string
@@ -214,9 +222,11 @@ class InitHandlerTest extends TestCase
 
         $handler->handleInit(new InitFakeMessage('.init', $channel));
         $handler->handleResponse(new InitFakeMessage('2', $channel)); // Russian
+        $handler->handleResponse(new InitFakeMessage('yes', $channel)); // confirm
         $channel->sendCount = 0;
 
-        $handler->handleResponse(new InitFakeMessage('yes', $channel));
+        // Step 3: reminders prompt — reply no
+        $handler->handleResponse(new InitFakeMessage('no', $channel));
 
         $this->assertSame(1, $channel->sendCount);
         $this->assertStringContainsString('registered', $channel->lastPayload);
@@ -225,6 +235,7 @@ class InitHandlerTest extends TestCase
         $config = $repo->get($channel->id());
         $this->assertNotNull($config);
         $this->assertSame('ru', $config['locale']);
+        $this->assertFalse($config['reminders_enabled']);
     }
 
     public function testConfirmNoCancels(): void
@@ -280,9 +291,12 @@ class InitHandlerTest extends TestCase
         $this->assertTrue($handler->hasPending('ch-1'));
         $this->assertTrue($handler->hasPending('ch-2'));
 
-        // Confirm ch-1
+        // Confirm ch-1 (3 steps now: language, confirm, reminders)
         $handler->handleResponse(new InitFakeMessage('1', $channel1));
         $handler->handleResponse(new InitFakeMessage('yes', $channel1));
+        // Still pending at reminders step
+        $this->assertTrue($handler->hasPending('ch-1'));
+        $handler->handleResponse(new InitFakeMessage('no', $channel1));
         $this->assertFalse($handler->hasPending('ch-1'));
         $this->assertTrue($handler->hasPending('ch-2'));
 

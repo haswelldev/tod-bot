@@ -27,4 +27,10 @@ return [
     'reminder.end.title' => '⚠️ Janela fechada: %boss%',
     'reminder.start.field' => 'Início da janela:',
     'reminder.end.field' => 'Fim da janela: ',
+
+    'remind.set.title' => '🔔 Lembrete único definido: %boss%',
+
+    'reminders.on' => '🔔 Lembretes do canal ativados.',
+    'reminders.off' => '🔕 Lembretes do canal desativados.',
+    'reminders.usage' => 'Uso: `.reminders on` ou `.reminders off`',
 ];

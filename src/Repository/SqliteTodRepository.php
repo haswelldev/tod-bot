@@ -32,21 +32,34 @@ class SqliteTodRepository implements TodRepositoryInterface
             PRIMARY KEY (boss, channel)
         )';
         $this->pdo->exec($sql);
+        $this->migrateSchema();
+    }
+
+    private function migrateSchema(): void
+    {
+        try {
+            $this->pdo->exec("ALTER TABLE tods ADD COLUMN remind INTEGER NOT NULL DEFAULT 0");
+        } catch (\PDOException $e) {
+            if (!str_contains($e->getMessage(), 'duplicate column name')) {
+                throw $e;
+            }
+        }
     }
 
     public function all(): array
     {
-        $stmt = $this->pdo->query('SELECT boss, tod, channel, start_reminded, end_reminded FROM tods');
+        $stmt = $this->pdo->query('SELECT boss, tod, channel, start_reminded, end_reminded, remind FROM tods');
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $out = [];
         foreach ($rows as $row) {
             $chan = $row['channel'];
             if (!isset($out[$chan])) $out[$chan] = [];
             $out[$chan][$row['boss']] = [
-                'tod' => (int) $row['tod'],
-                'channel' => $row['channel'],
+                'tod'            => (int)  $row['tod'],
+                'channel'        => $row['channel'],
                 'start_reminded' => (bool) $row['start_reminded'],
-                'end_reminded' => (bool) $row['end_reminded'],
+                'end_reminded'   => (bool) $row['end_reminded'],
+                'remind'         => (bool) $row['remind'],
             ];
         }
         return $out;
@@ -54,16 +67,17 @@ class SqliteTodRepository implements TodRepositoryInterface
 
     public function allByChannel($channel): array
     {
-        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded FROM tods WHERE channel = :channel');
+        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded, remind FROM tods WHERE channel = :channel');
         $stmt->execute([':channel' => $channel]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $out = [];
         foreach ($rows as $row) {
             $out[$row['boss']] = [
-                'tod' => (int) $row['tod'],
-                'channel' => $row['channel'],
+                'tod'            => (int)  $row['tod'],
+                'channel'        => $row['channel'],
                 'start_reminded' => (bool) $row['start_reminded'],
-                'end_reminded' => (bool) $row['end_reminded'],
+                'end_reminded'   => (bool) $row['end_reminded'],
+                'remind'         => (bool) $row['remind'],
             ];
         }
         return $out;
@@ -71,37 +85,40 @@ class SqliteTodRepository implements TodRepositoryInterface
 
     public function get($boss, $channel): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded FROM tods WHERE boss = :boss AND channel = :channel');
+        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded, remind FROM tods WHERE boss = :boss AND channel = :channel');
         $stmt->execute([':boss' => $boss, ':channel' => $channel]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
         return [
-            'tod' => (int) $row['tod'],
-            'channel' => $row['channel'],
+            'tod'            => (int)  $row['tod'],
+            'channel'        => $row['channel'],
             'start_reminded' => (bool) $row['start_reminded'],
-            'end_reminded' => (bool) $row['end_reminded'],
+            'end_reminded'   => (bool) $row['end_reminded'],
+            'remind'         => (bool) $row['remind'],
         ];
     }
 
     public function set($boss, $channel, $data)
     {
         // Upsert behavior: try update then insert if 0 rows affected
-        $upd = $this->pdo->prepare('UPDATE tods SET tod = :tod, start_reminded = :sr, end_reminded = :er WHERE boss = :boss AND channel = :channel');
+        $upd = $this->pdo->prepare('UPDATE tods SET tod = :tod, start_reminded = :sr, end_reminded = :er, remind = :remind WHERE boss = :boss AND channel = :channel');
         $upd->execute([
-            ':tod' => (int) ($data['tod'] ?? 0),
+            ':tod'     => (int) ($data['tod'] ?? 0),
             ':channel' => (string) ($channel ?? ''),
-            ':sr' => !empty($data['start_reminded']) ? 1 : 0,
-            ':er' => !empty($data['end_reminded']) ? 1 : 0,
-            ':boss' => $boss,
+            ':sr'      => !empty($data['start_reminded']) ? 1 : 0,
+            ':er'      => !empty($data['end_reminded'])   ? 1 : 0,
+            ':remind'  => !empty($data['remind'])          ? 1 : 0,
+            ':boss'    => $boss,
         ]);
         if ($upd->rowCount() === 0) {
-            $ins = $this->pdo->prepare('INSERT INTO tods (boss, channel, tod, start_reminded, end_reminded) VALUES (:boss, :channel, :tod, :sr, :er)');
+            $ins = $this->pdo->prepare('INSERT INTO tods (boss, channel, tod, start_reminded, end_reminded, remind) VALUES (:boss, :channel, :tod, :sr, :er, :remind)');
             $ins->execute([
-                ':boss' => $boss,
-                ':tod' => (int) ($data['tod'] ?? 0),
+                ':boss'    => $boss,
+                ':tod'     => (int) ($data['tod'] ?? 0),
                 ':channel' => (string) ($channel ?? ''),
-                ':sr' => !empty($data['start_reminded']) ? 1 : 0,
-                ':er' => !empty($data['end_reminded']) ? 1 : 0,
+                ':sr'      => !empty($data['start_reminded']) ? 1 : 0,
+                ':er'      => !empty($data['end_reminded'])   ? 1 : 0,
+                ':remind'  => !empty($data['remind'])          ? 1 : 0,
             ]);
         }
     }

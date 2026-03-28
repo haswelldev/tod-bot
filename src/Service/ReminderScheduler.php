@@ -45,35 +45,43 @@ class ReminderScheduler
                 if (!$channel) { continue; }
 
                 // Use this channel's configured locale for reminder messages
-                $locale = $channelConfigRepo
-                    ? ($channelConfigRepo->get($channelId)['locale'] ?? null)
-                    : null;
+                $channelConfig    = $channelConfigRepo?->get($channelId);
+                $locale           = $channelConfig['locale'] ?? null;
+                $remindersEnabled = !empty($channelConfig['reminders_enabled']);
                 I18n::setLocale($locale);
 
                 foreach ($byBoss as $boss => $info) {
-                    $tod = $info['tod'] ?? 0;
+                    $tod           = $info['tod'] ?? 0;
                     $startReminded = !empty($info['start_reminded']);
-                    $endReminded = !empty($info['end_reminded']);
+                    $endReminded   = !empty($info['end_reminded']);
+                    $remind        = !empty($info['remind']);
 
                     $window = $bossRegistry->getWindow($boss);
-                    $start = $tod + $window['start'];
-                    $end   = $tod + $window['end'];
+                    $start  = $tod + $window['start'];
+                    $end    = $tod + $window['end'];
 
                     if (!$startReminded && $now >= $start) {
-                        $embed = new Embed($discord);
-                        $embed->setTitle(I18n::t('reminder.start.title', ['%boss%' => ucfirst($boss)]))
-                            ->setColor(0x00cc99)
-                            ->addFieldValues(I18n::t('reminder.start.field'), TimeFormatter::discord($start), true);
-                        $channel->sendMessage(MessageBuilder::new()->addEmbed($embed));
+                        if ($remindersEnabled || $remind) {
+                            $embed = new Embed($discord);
+                            $embed->setTitle(I18n::t('reminder.start.title', ['%boss%' => ucfirst($boss)]))
+                                ->setColor(0x00cc99)
+                                ->addFieldValues(I18n::t('reminder.start.field'), TimeFormatter::discord($start), true);
+                            $channel->sendMessage(MessageBuilder::new()->addEmbed($embed));
+                        }
                         $info['start_reminded'] = true;
+                        if ($remind && !$remindersEnabled) {
+                            $info['remind'] = false;
+                        }
                     }
 
                     if (!$endReminded && $now >= $end) {
-                        $embed = new Embed($discord);
-                        $embed->setTitle(I18n::t('reminder.end.title', ['%boss%' => ucfirst($boss)]))
-                            ->setColor(0xFF6600)
-                            ->addFieldValues(I18n::t('reminder.end.field'), TimeFormatter::discord($end), true);
-                        $channel->sendMessage(MessageBuilder::new()->addEmbed($embed));
+                        if ($remindersEnabled) {
+                            $embed = new Embed($discord);
+                            $embed->setTitle(I18n::t('reminder.end.title', ['%boss%' => ucfirst($boss)]))
+                                ->setColor(0xFF6600)
+                                ->addFieldValues(I18n::t('reminder.end.field'), TimeFormatter::discord($end), true);
+                            $channel->sendMessage(MessageBuilder::new()->addEmbed($embed));
+                        }
                         $info['end_reminded'] = true;
                     }
 

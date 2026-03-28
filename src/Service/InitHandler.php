@@ -10,7 +10,7 @@ class InitHandler
     private Discord $discord;
     private ChannelConfigRepositoryInterface $channelConfigRepo;
 
-    /** @var array<string, array{step: string, locale?: string}> */
+    /** @var array<string, array{step: string, locale?: string, reminders?: bool}> */
     private array $pending = [];
 
     private const LANGUAGES = [
@@ -92,15 +92,13 @@ class InitHandler
             $lower = strtolower($text);
 
             if ($lower === 'yes') {
-                $this->channelConfigRepo->set($channelId, [
-                    'guild_id' => (string) ($message->guild_id ?? ''),
-                    'locale'   => $state['locale'],
-                ]);
-                $this->channelConfigRepo->save();
-                unset($this->pending[$channelId]);
-
+                $this->pending[$channelId] = ['step' => 'reminders', 'locale' => $state['locale']];
                 $message->channel->sendMessage(
-                    "✅ Channel registered! Use `.tod`, `.window`, `.list` commands to track raid bosses."
+                    "**Reminders Setup**\n\n"
+                    . "Enable automatic reminders for all bosses in this channel?\n"
+                    . "- `yes` — notify when every boss window opens and closes\n"
+                    . "- `no` — reminders off (use `.remind BossName` for one-time alerts)\n\n"
+                    . "Reply with `yes` or `no`."
                 )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
                 return;
             }
@@ -115,6 +113,36 @@ class InitHandler
 
             $message->channel->sendMessage(
                 "Please reply with `yes` or `no`."
+            )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
+            return;
+        }
+
+        if ($state['step'] === 'reminders') {
+            $lower = strtolower($text);
+
+            if (!in_array($lower, ['yes', 'no'])) {
+                $message->channel->sendMessage(
+                    "Please reply with `yes` or `no`."
+                )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
+                return;
+            }
+
+            $this->channelConfigRepo->set($channelId, [
+                'guild_id'          => (string) ($message->guild_id ?? ''),
+                'guild_name'        => (string) ($message->channel->guild?->name ?? ''),
+                'channel_name'      => (string) ($message->channel->name ?? ''),
+                'locale'            => $state['locale'],
+                'reminders_enabled' => $lower === 'yes',
+            ]);
+            $this->channelConfigRepo->save();
+            unset($this->pending[$channelId]);
+
+            $reminderStatus = $lower === 'yes'
+                ? "🔔 Reminders enabled."
+                : "🔕 Reminders disabled. Use `.remind BossName` for one-time alerts.";
+
+            $message->channel->sendMessage(
+                "✅ Channel registered! Use `.tod`, `.window`, `.list`, `.remind` commands to track raid bosses.\n{$reminderStatus}"
             )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
         }
     }

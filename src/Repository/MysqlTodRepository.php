@@ -30,11 +30,20 @@ class MysqlTodRepository implements TodRepositoryInterface
                 PRIMARY KEY (boss, channel)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ');
+        $this->migrateSchema();
+    }
+
+    private function migrateSchema(): void
+    {
+        $this->pdo->exec("
+            ALTER TABLE tods
+                ADD COLUMN IF NOT EXISTS remind TINYINT(1) NOT NULL DEFAULT 0
+        ");
     }
 
     public function all(): array
     {
-        $stmt = $this->pdo->query('SELECT boss, tod, channel, start_reminded, end_reminded FROM tods');
+        $stmt = $this->pdo->query('SELECT boss, tod, channel, start_reminded, end_reminded, remind FROM tods');
         $out  = [];
         foreach ($stmt->fetchAll() as $row) {
             $chan = $row['channel'];
@@ -48,7 +57,7 @@ class MysqlTodRepository implements TodRepositoryInterface
 
     public function allByChannel($channel): array
     {
-        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded FROM tods WHERE channel = :channel');
+        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded, remind FROM tods WHERE channel = :channel');
         $stmt->execute([':channel' => $channel]);
         $out = [];
         foreach ($stmt->fetchAll() as $row) {
@@ -59,7 +68,7 @@ class MysqlTodRepository implements TodRepositoryInterface
 
     public function get($boss, $channel): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded FROM tods WHERE boss = :boss AND channel = :channel');
+        $stmt = $this->pdo->prepare('SELECT boss, tod, channel, start_reminded, end_reminded, remind FROM tods WHERE boss = :boss AND channel = :channel');
         $stmt->execute([':boss' => $boss, ':channel' => $channel]);
         $row = $stmt->fetch();
         return $row ? $this->hydrate($row) : null;
@@ -68,12 +77,13 @@ class MysqlTodRepository implements TodRepositoryInterface
     public function set($boss, $channel, $data): void
     {
         $stmt = $this->pdo->prepare('
-            INSERT INTO tods (boss, channel, tod, start_reminded, end_reminded)
-            VALUES (:boss, :channel, :tod, :sr, :er)
+            INSERT INTO tods (boss, channel, tod, start_reminded, end_reminded, remind)
+            VALUES (:boss, :channel, :tod, :sr, :er, :remind)
             ON DUPLICATE KEY UPDATE
                 tod            = VALUES(tod),
                 start_reminded = VALUES(start_reminded),
-                end_reminded   = VALUES(end_reminded)
+                end_reminded   = VALUES(end_reminded),
+                remind         = VALUES(remind)
         ');
         $stmt->execute([
             ':boss'    => (string) $boss,
@@ -81,6 +91,7 @@ class MysqlTodRepository implements TodRepositoryInterface
             ':tod'     => (int) ($data['tod'] ?? 0),
             ':sr'      => !empty($data['start_reminded']) ? 1 : 0,
             ':er'      => !empty($data['end_reminded'])   ? 1 : 0,
+            ':remind'  => !empty($data['remind'])          ? 1 : 0,
         ]);
     }
 
@@ -102,6 +113,7 @@ class MysqlTodRepository implements TodRepositoryInterface
             'channel'        => (string) $row['channel'],
             'start_reminded' => (bool) $row['start_reminded'],
             'end_reminded'   => (bool) $row['end_reminded'],
+            'remind'         => (bool) $row['remind'],
         ];
     }
 }

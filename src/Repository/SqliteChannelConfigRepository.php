@@ -24,30 +24,64 @@ class SqliteChannelConfigRepository implements ChannelConfigRepositoryInterface
                 locale     TEXT NOT NULL DEFAULT \'en\'
             )
         ');
+        $this->migrateSchema();
+    }
+
+    private function migrateSchema(): void
+    {
+        $columns = [
+            "ALTER TABLE channels ADD COLUMN guild_name        TEXT    NOT NULL DEFAULT ''",
+            "ALTER TABLE channels ADD COLUMN channel_name      TEXT    NOT NULL DEFAULT ''",
+            "ALTER TABLE channels ADD COLUMN reminders_enabled INTEGER NOT NULL DEFAULT 0",
+        ];
+        foreach ($columns as $sql) {
+            try {
+                $this->pdo->exec($sql);
+            } catch (\PDOException $e) {
+                if (!str_contains($e->getMessage(), 'duplicate column name')) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     public function get(string $channelId): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT guild_id, locale FROM channels WHERE channel_id = :id');
+        $stmt = $this->pdo->prepare('SELECT guild_id, guild_name, channel_name, locale, reminders_enabled FROM channels WHERE channel_id = :id');
         $stmt->execute([':id' => $channelId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $row ?: null;
+        if (!$row) {
+            return null;
+        }
+        return [
+            'guild_id'          => $row['guild_id'],
+            'guild_name'        => $row['guild_name'],
+            'channel_name'      => $row['channel_name'],
+            'locale'            => $row['locale'],
+            'reminders_enabled' => (bool) $row['reminders_enabled'],
+        ];
     }
 
     public function set(string $channelId, array $data): void
     {
         $stmt = $this->pdo->prepare('
-            INSERT INTO channels (channel_id, guild_id, locale)
-            VALUES (:channel_id, :guild_id, :locale)
+            INSERT INTO channels (channel_id, guild_id, guild_name, channel_name, locale, reminders_enabled)
+            VALUES (:channel_id, :guild_id, :guild_name, :channel_name, :locale, :reminders_enabled)
             ON CONFLICT(channel_id) DO UPDATE SET
-                guild_id = excluded.guild_id,
-                locale   = excluded.locale
+                guild_id          = excluded.guild_id,
+                guild_name        = excluded.guild_name,
+                channel_name      = excluded.channel_name,
+                locale            = excluded.locale,
+                reminders_enabled = excluded.reminders_enabled
         ');
         $stmt->execute([
-            ':channel_id' => $channelId,
-            ':guild_id'   => $data['guild_id'] ?? '',
-            ':locale'     => $data['locale'] ?? 'en',
+            ':channel_id'        => $channelId,
+            ':guild_id'          => $data['guild_id']          ?? '',
+            ':guild_name'        => $data['guild_name']         ?? '',
+            ':channel_name'      => $data['channel_name']       ?? '',
+            ':locale'            => $data['locale']             ?? 'en',
+            ':reminders_enabled' => !empty($data['reminders_enabled']) ? 1 : 0,
         ]);
     }
 

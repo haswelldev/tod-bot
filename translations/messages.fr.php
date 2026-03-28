@@ -27,4 +27,10 @@ return [
     'reminder.end.title' => '⚠️ Fenêtre fermée : %boss%',
     'reminder.start.field' => 'Début de la fenêtre :',
     'reminder.end.field' => 'Fin de la fenêtre : ',
+
+    'remind.set.title' => '🔔 Rappel unique défini : %boss%',
+
+    'reminders.on' => '🔔 Rappels du canal activés.',
+    'reminders.off' => '🔕 Rappels du canal désactivés.',
+    'reminders.usage' => 'Utilisation : `.reminders on` ou `.reminders off`',
 ];

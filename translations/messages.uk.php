@@ -27,4 +27,10 @@ return [
     'reminder.end.title' => '⚠️ Вікно закрилося: %boss%',
     'reminder.start.field' => 'Початок вікна:',
     'reminder.end.field' => 'Кінець вікна: ',
+
+    'remind.set.title' => '🔔 Одноразове нагадування встановлено: %boss%',
+
+    'reminders.on' => '🔔 Нагадування для каналу увімкнено.',
+    'reminders.off' => '🔕 Нагадування для каналу вимкнено.',
+    'reminders.usage' => 'Використання: `.reminders on` або `.reminders off`',
 ];

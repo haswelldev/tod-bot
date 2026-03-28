@@ -27,4 +27,10 @@ return [
     'reminder.end.title' => '⚠️ Window closed: %boss%',
     'reminder.start.field' => 'Window start:',
     'reminder.end.field' => 'Window end: ',
+
+    'remind.set.title' => '🔔 One-time reminder set: %boss%',
+
+    'reminders.on' => '🔔 Channel reminders enabled.',
+    'reminders.off' => '🔕 Channel reminders disabled.',
+    'reminders.usage' => 'Usage: `.reminders on` or `.reminders off`',
 ];

@@ -27,4 +27,10 @@ return [
     'reminder.end.title' => '⚠️ Το παράθυρο έκλεισε: %boss%',
     'reminder.start.field' => 'Έναρξη παραθύρου:',
     'reminder.end.field' => 'Λήξη παραθύρου: ',
+
+    'remind.set.title' => '🔔 Εφάπαξ υπενθύμιση ορίστηκε: %boss%',
+
+    'reminders.on' => '🔔 Υπενθυμίσεις καναλιού ενεργοποιήθηκαν.',
+    'reminders.off' => '🔕 Υπενθυμίσεις καναλιού απενεργοποιήθηκαν.',
+    'reminders.usage' => 'Χρήση: `.reminders on` ή `.reminders off`',
 ];

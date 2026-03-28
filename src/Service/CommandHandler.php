@@ -76,6 +76,16 @@ class CommandHandler
             $this->handleList($message);
             return;
         }
+
+        if (in_array($cmd, ['.remind', '.нагад', '.напомни']) && isset($parts[1])) {
+            $this->handleRemind($message, $this->bossRegistry->resolve(strtolower($parts[1])));
+            return;
+        }
+
+        if ($cmd === '.reminders' && isset($parts[1])) {
+            $this->handleRemindersToggle($message, strtolower($parts[1]));
+            return;
+        }
     }
 
     private function looksLikeTimezone($s): bool
@@ -103,10 +113,11 @@ class CommandHandler
         }
 
         $data = [
-            'tod' => $now,
-            'channel' => $message->channel_id,
+            'tod'            => $now,
+            'channel'        => $message->channel_id,
             'start_reminded' => false,
-            'end_reminded' => false,
+            'end_reminded'   => false,
+            'remind'         => false,
         ];
         $this->repo->set($boss, $message->channel_id, $data);
         $this->repo->save();
@@ -187,6 +198,69 @@ class CommandHandler
             ->setColor(0xFF3333);
 
         // Use MessageBuilder to send embeds (discord-php >=10)
+        $message->channel->sendMessage(MessageBuilder::new()->addEmbed($embed))
+            ->then(function () use ($message) {
+                $message->delete();
+            }, function () use ($message) {
+                $message->delete();
+            });
+    }
+
+    private function handleRemind($message, $boss): void
+    {
+        $info = $this->repo->get($boss, $message->channel_id);
+        if (!$info) {
+            $message->channel->sendMessage(I18n::t('common.no_boss', ['%boss%' => $boss]))
+                ->then(function () use ($message) {
+                    $message->delete();
+                }, function () use ($message) {
+                    $message->delete();
+                });
+            return;
+        }
+
+        $info['remind'] = true;
+        $this->repo->set($boss, $message->channel_id, $info);
+        $this->repo->save();
+
+        $embed = new Embed($this->discord);
+        $embed->setTitle(I18n::t('remind.set.title', ['%boss%' => ucfirst($boss)]))
+            ->setColor(0x9B59B6);
+
+        $message->channel->sendMessage(MessageBuilder::new()->addEmbed($embed))
+            ->then(function () use ($message) {
+                $message->delete();
+            }, function () use ($message) {
+                $message->delete();
+            });
+    }
+
+    private function handleRemindersToggle($message, string $toggle): void
+    {
+        if (!in_array($toggle, ['on', 'off'])) {
+            $message->channel->sendMessage(I18n::t('reminders.usage'))
+                ->then(function () use ($message) {
+                    $message->delete();
+                }, function () use ($message) {
+                    $message->delete();
+                });
+            return;
+        }
+
+        $channelId = (string) $message->channel_id;
+        $config = $this->channelConfigRepo?->get($channelId);
+        if ($config === null) {
+            return;
+        }
+
+        $config['reminders_enabled'] = ($toggle === 'on');
+        $this->channelConfigRepo->set($channelId, $config);
+        $this->channelConfigRepo->save();
+
+        $embed = new Embed($this->discord);
+        $embed->setTitle(I18n::t($toggle === 'on' ? 'reminders.on' : 'reminders.off'))
+            ->setColor($toggle === 'on' ? 0x00cc99 : 0xAAAAAA);
+
         $message->channel->sendMessage(MessageBuilder::new()->addEmbed($embed))
             ->then(function () use ($message) {
                 $message->delete();

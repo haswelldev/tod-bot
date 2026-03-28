@@ -54,7 +54,11 @@ class JsonTodRepository implements TodRepositoryInterface
 
     public function get($boss, $channel)
     {
-        return $this->data[$channel][$boss] ?? null;
+        $entry = $this->data[$channel][$boss] ?? null;
+        if ($entry === null) {
+            return null;
+        }
+        return array_merge(['remind' => false], $entry);
     }
 
     public function set($boss, $channel, $data): void

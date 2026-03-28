@@ -22,7 +22,17 @@ class JsonChannelConfigRepository implements ChannelConfigRepositoryInterface
 
     public function get(string $channelId): ?array
     {
-        return $this->data[$channelId] ?? null;
+        $entry = $this->data[$channelId] ?? null;
+        if ($entry === null) {
+            return null;
+        }
+        return [
+            'guild_id'          => $entry['guild_id']          ?? '',
+            'guild_name'        => $entry['guild_name']         ?? '',
+            'channel_name'      => $entry['channel_name']       ?? '',
+            'locale'            => $entry['locale']             ?? 'en',
+            'reminders_enabled' => (bool) ($entry['reminders_enabled'] ?? false),
+        ];
     }
 
     public function set(string $channelId, array $data): void
