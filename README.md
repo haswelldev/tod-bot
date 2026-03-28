@@ -8,7 +8,7 @@
 version: "3.8"
 services:
   bot:
-    image: ghcr.io/421p/tod-bot:latest
+    image: ghcr.io/haswelldev/tod-bot:latest
     container_name: tod-bot
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
@@ -79,7 +79,7 @@ TodBot is a lightweight Discord bot to record boss Time of Death (ToD), show res
   version: "3.8"
   services:
     bot:
-      image: ghcr.io/421p/tod-bot:latest
+      image: ghcr.io/haswelldev/tod-bot:latest
       container_name: tod-bot
       environment:
         - DISCORD_TOKEN=${DISCORD_TOKEN}
@@ -96,7 +96,7 @@ TodBot is a lightweight Discord bot to record boss Time of Death (ToD), show res
 
 - Pulling the published image (GitHub Container Registry)
   - docker login ghcr.io -u YOUR_GITHUB_USERNAME -p YOUR_GITHUB_TOKEN
-  - docker pull ghcr.io/421p/tod-bot:latest
+  - docker pull ghcr.io/haswelldev/tod-bot:latest
   - docker run -d \
       --name TodBot \
       -e DISCORD_TOKEN=your_token \
@@ -104,7 +104,7 @@ TodBot is a lightweight Discord bot to record boss Time of Death (ToD), show res
       -e TZ=UTC \
       -v "$(pwd)/data:/app/data" \
       --restart unless-stopped \
-      ghcr.io/421p/tod-bot:latest
+      ghcr.io/haswelldev/tod-bot:latest
 
 ### Configuration
 - DISCORD_TOKEN — required

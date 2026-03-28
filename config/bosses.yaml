@@ -1,0 +1,44 @@
+# Each boss entry uses the canonical (display) name as the key.
+# - aliases: alternative names / abbreviations users may type
+# - respawn: fixed respawn time in hours (window start offset from ToD)
+# - random: random window duration in hours (window end = respawn + random)
+#
+# Bosses not listed here use the default window configured via
+# TOD_WINDOW_START and TOD_WINDOW_RANDOM environment variables (default: 12h + 9h).
+
+bosses:
+  "queen ant":
+    aliases: [qa, aq, "ant queen"]
+    respawn: 24
+    random: 4
+
+  core:
+    respawn: 48
+    random: 4
+
+  orfen:
+    respawn: 33
+    random: 4
+
+  zaken:
+    respawn: 45
+    random: 4
+
+  baium:
+    respawn: 125
+    random: 4
+
+  frintezza:
+    aliases: [tezza]
+    respawn: 48
+    random: 4
+
+  antharas:
+    aliases: [taras]
+    respawn: 192
+    random: 4
+
+  valakas:
+    aliases: [lakas]
+    respawn: 264
+    random: 4

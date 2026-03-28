@@ -11,11 +11,13 @@ class CommandHandler
 {
     private Discord $discord;
     private TodRepositoryInterface $repo;
+    private BossRegistry $bossRegistry;
 
-    public function __construct(Discord $discord, TodRepositoryInterface $repo)
+    public function __construct(Discord $discord, TodRepositoryInterface $repo, ?BossRegistry $bossRegistry = null)
     {
         $this->discord = $discord;
         $this->repo = $repo;
+        $this->bossRegistry = $bossRegistry ?? new BossRegistry();
     }
 
     public function __invoke($message): void
@@ -25,7 +27,7 @@ class CommandHandler
         $cmd = strtolower($parts[0]);
 
         if (in_array($cmd, ['.tod', '.тод']) && isset($parts[1])) {
-            $boss = strtolower($parts[1]);
+            $boss = $this->bossRegistry->resolve(strtolower($parts[1]));
             $args = array_slice($parts, 2);
             $timeArg = null;
             $tzArg = null;
@@ -48,12 +50,12 @@ class CommandHandler
         }
 
         if (in_array($cmd, ['.window', '.w', '.вікно', '.окно']) && isset($parts[1])) {
-            $this->handleWindow($message, strtolower($parts[1]));
+            $this->handleWindow($message, $this->bossRegistry->resolve(strtolower($parts[1])));
             return;
         }
 
         if (in_array($cmd, ['.del', '.дел']) && isset($parts[1])) {
-            $this->handleDelete($message, strtolower($parts[1]));
+            $this->handleDelete($message, $this->bossRegistry->resolve(strtolower($parts[1])));
             return;
         }
 
@@ -96,8 +98,9 @@ class CommandHandler
         $this->repo->set($boss, $message->channel_id, $data);
         $this->repo->save();
 
-        $start = $now + 12 * 3600;
-        $end = $now + 21 * 3600;
+        $window = $this->bossRegistry->getWindow($boss);
+        $start = $now + $window['start'];
+        $end   = $now + $window['end'];
 
         $embed = new Embed($this->discord);
         $embed->setTitle(I18n::t('tod.title', ['%boss%' => ucfirst($boss)]))
@@ -130,8 +133,9 @@ class CommandHandler
         }
 
         $tod = $info['tod'];
-        $start = $tod + 12 * 3600;
-        $end = $tod + 21 * 3600;
+        $window = $this->bossRegistry->getWindow($boss);
+        $start = $tod + $window['start'];
+        $end   = $tod + $window['end'];
 
         $embed = new Embed($this->discord);
         $embed->setTitle(I18n::t('window.title', ['%boss%' => ucfirst($boss)]))
@@ -186,8 +190,9 @@ class CommandHandler
         foreach ($all as $boss => $info) {
             if (!isset($info['tod'])) continue;
             $tod = (int) $info['tod'];
-            $start = $tod + 12 * 3600;
-            $end = $tod + 21 * 3600;
+            $window = $this->bossRegistry->getWindow($boss);
+            $start = $tod + $window['start'];
+            $end   = $tod + $window['end'];
             if ($now >= $end) {
                 // window closed — skip
                 continue;

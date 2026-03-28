@@ -11,19 +11,22 @@ class ReminderScheduler
 {
     private Discord $discord;
     private TodRepositoryInterface $repo;
+    private BossRegistry $bossRegistry;
 
-    public function __construct(Discord $discord, TodRepositoryInterface $repo)
+    public function __construct(Discord $discord, TodRepositoryInterface $repo, ?BossRegistry $bossRegistry = null)
     {
         $this->discord = $discord;
         $this->repo = $repo;
+        $this->bossRegistry = $bossRegistry ?? new BossRegistry();
     }
 
     public function start(): void
     {
         $discord = $this->discord;
         $repo = $this->repo;
+        $bossRegistry = $this->bossRegistry;
 
-        $discord->loop->addPeriodicTimer(60, function () use ($discord, $repo) {
+        $discord->loop->addPeriodicTimer(60, function () use ($discord, $repo, $bossRegistry) {
             $now = time();
             $tods = $repo->all(); // [channelId => [boss => info]]
 
@@ -38,8 +41,9 @@ class ReminderScheduler
                     $startReminded = !empty($info['start_reminded']);
                     $endReminded = !empty($info['end_reminded']);
 
-                    $start = $tod + 12 * 3600;
-                    $end = $tod + 21 * 3600;
+                    $window = $bossRegistry->getWindow($boss);
+                    $start = $tod + $window['start'];
+                    $end   = $tod + $window['end'];
 
                     if (!$startReminded && $now >= $start) {
                         $embed = new Embed($discord);
