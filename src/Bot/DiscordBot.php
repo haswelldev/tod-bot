@@ -50,7 +50,7 @@ class DiscordBot
             echo "Bot is ready." . PHP_EOL;
 
             $commandHandler = new CommandHandler($discord, $repo, $bossRegistry, $channelConfigRepo);
-            $initHandler    = new InitHandler($discord, $channelConfigRepo);
+            $initHandler    = new InitHandler($channelConfigRepo);
 
             $discord->on('message', function ($message) use ($commandHandler, $initHandler, $channelConfigRepo) {
                 // Ignore messages from bots (including self)
@@ -81,11 +81,11 @@ class DiscordBot
                 $commandHandler($message);
             });
 
-            (new ReminderScheduler($discord, $repo, $bossRegistry, $channelConfigRepo))->start();
+            new ReminderScheduler($discord, $repo, $bossRegistry, $channelConfigRepo)->start();
         });
     }
 
-    public function run()
+    public function run(): void
     {
         $this->discord->run();
     }

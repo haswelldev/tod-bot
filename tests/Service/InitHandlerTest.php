@@ -91,16 +91,9 @@ class InMemoryChannelConfigRepo implements ChannelConfigRepositoryInterface
 
 class InitHandlerTest extends TestCase
 {
-    private function makeDiscordMock()
-    {
-        return $this->getMockBuilder(Discord\Discord::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-    }
-
     private function makeHandler(InMemoryChannelConfigRepo $repo): InitHandler
     {
-        return new InitHandler($this->makeDiscordMock(), $repo);
+        return new InitHandler($repo);
     }
 
     // --- hasPending ---

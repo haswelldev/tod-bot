@@ -4,9 +4,9 @@ namespace TodBot;
 
 class Config
 {
-    private $token;
-    private $todFile;
-    private $storageDriver;
+    private string $token;
+    private string $todFile;
+    private string $storageDriver;
     private int $defaultWindowStart;
     private int $defaultWindowRandom;
     private string $bossConfigPath;
@@ -39,7 +39,7 @@ class Config
         $host     = getenv('MYSQL_HOST')     ?: '127.0.0.1';
         $port     = (int) (getenv('MYSQL_PORT') ?: 3306);
         $dbname   = getenv('MYSQL_DATABASE') ?: 'todbot';
-        $this->mysqlDsn      = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
+        $this->mysqlDsn      = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
         $this->mysqlUser     = getenv('MYSQL_USER')     ?: 'todbot';
         $this->mysqlPassword = getenv('MYSQL_PASSWORD') ?: '';
     }

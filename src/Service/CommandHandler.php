@@ -84,7 +84,6 @@ class CommandHandler
 
         if ($cmd === '.reminders' && isset($parts[1])) {
             $this->handleRemindersToggle($message, strtolower($parts[1]));
-            return;
         }
     }
 
@@ -129,7 +128,7 @@ class CommandHandler
         $embed = new Embed($this->discord);
         $embed->setTitle(I18n::t('tod.title', ['%boss%' => ucfirst($boss)]))
             ->setColor(0x3498db)
-            ->addFieldValues(I18n::t('common.death_time'), TimeFormatter::discord($now), false)
+            ->addFieldValues(I18n::t('common.death_time'), TimeFormatter::discord($now))
             ->addFieldValues(I18n::t('common.window_start'), TimeFormatter::discord($start), true)
             ->addFieldValues(I18n::t('common.window_end'), TimeFormatter::discord($end), true);
 
@@ -164,7 +163,7 @@ class CommandHandler
         $embed = new Embed($this->discord);
         $embed->setTitle(I18n::t('window.title', ['%boss%' => ucfirst($boss)]))
             ->setColor(0x2ecc71)
-            ->addFieldValues(I18n::t('common.last_tod'), TimeFormatter::discord($tod), false)
+            ->addFieldValues(I18n::t('common.last_tod'), TimeFormatter::discord($tod))
             ->addFieldValues(I18n::t('common.window_start'), TimeFormatter::discord($start), true)
             ->addFieldValues(I18n::t('common.window_end'), TimeFormatter::discord($end), true);
 

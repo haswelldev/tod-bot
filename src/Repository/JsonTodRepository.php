@@ -4,7 +4,7 @@ namespace TodBot\Repository;
 
 class JsonTodRepository implements TodRepositoryInterface
 {
-    private       $file;
+    private string $file;
     private array $data = [];
 
     public function __construct($file)
@@ -26,7 +26,7 @@ class JsonTodRepository implements TodRepositoryInterface
         // New format: [channelId => [boss => data]]
         // Old format: [boss => data] with 'channel' inside data
         $isOld = false;
-        foreach ($loaded as $k => $v) {
+        foreach ($loaded as $v) {
             if (is_array($v) && isset($v['tod'])) { $isOld = true; break; }
         }
         if ($isOld) {
@@ -52,7 +52,7 @@ class JsonTodRepository implements TodRepositoryInterface
         return $this->data[$channel] ?? [];
     }
 
-    public function get($boss, $channel)
+    public function get($boss, $channel): ?array
     {
         $entry = $this->data[$channel][$boss] ?? null;
         if ($entry === null) {

@@ -4,6 +4,7 @@ namespace TodBot\Service;
 
 use DateTime;
 use DateTimeZone;
+use Exception;
 
 class TimeParser
 {
@@ -15,7 +16,7 @@ class TimeParser
      * @param int|null    $now     reference time (unix, UTC). Defaults to time().
      * @return array{ts:int,tz:string} Parsed UTC timestamp and normalized timezone label used for interpretation.
      */
-    public static function parse($timeArg = null, $tzArg = null, $now = null)
+    public static function parse(?string $timeArg = null, ?string $tzArg = null, ?int $now = null): array
     {
         $now = $now === null ? time() : (int) $now;
         $timeArg = $timeArg !== null ? trim((string) $timeArg) : '';
@@ -39,13 +40,13 @@ class TimeParser
 
         // Relative durations like 2h, 30m, 1h20m, optionally with 'ago' or leading '-'
         if (preg_match('/^-?\d+[hm](?:\d+m)?\s*(ago)?$/i', str_replace(' ', '', $timeArg)) || preg_match('/\d+\s*[hm]/i', $timeArg)) {
-            $negative = strpos($timeArg, '-') === 0 || stripos($timeArg, 'ago') !== false;
+            $negative = str_starts_with($timeArg, '-') || stripos($timeArg, 'ago') !== false;
             $hours = 0; $mins = 0;
             if (preg_match('/(\d+)\s*h/i', $timeArg, $m)) { $hours = (int) $m[1]; }
             if (preg_match('/(\d+)\s*m/i', $timeArg, $m)) { $mins = (int) $m[1]; }
             $delta = ($hours * 3600) + ($mins * 60);
             if ($delta > 0) {
-                $ts = $negative ? $now - $delta : $now - $delta; // default assume 'ago'
+                $ts = $now - $delta; // default assume 'ago'
                 return ['ts' => $ts, 'tz' => 'UTC'];
             }
         }
@@ -66,7 +67,7 @@ class TimeParser
                     $ref = new DateTime('@' . $now);
                     $ref->setTimezone($iana);
                     // Set the provided wall-clock time on that date
-                    $ref->setTime($h, $i, 0);
+                    $ref->setTime($h, $i);
                     // Convert to UTC epoch
                     $utcTs = self::toUtcTimestamp($ref);
                     return ['ts' => $utcTs, 'tz' => $tzLabel];
@@ -102,7 +103,6 @@ class TimeParser
                 $text = preg_replace('/\s+/', ' ' . $year . ' ', $timeArg, 1);
                 $fmtToUse = str_replace(['d-m H:i', 'd.m H:i'], ['d-m Y H:i', 'd.m Y H:i'], $fmt);
             }
-            $dt = false;
             if ($iana) {
                 $dt = DateTime::createFromFormat($fmtToUse, $text, $iana);
             } else {
@@ -122,14 +122,14 @@ class TimeParser
         // Generic fallback: let strtotime handle various inputs if possible
         $fallback = @strtotime($timeArg . ' ' . $tzLabel);
         if ($fallback !== false) {
-            return ['ts' => (int) $fallback, 'tz' => $tzLabel];
+            return ['ts' => $fallback, 'tz' => $tzLabel];
         }
 
         // If nothing matched, return null by throwing to caller via false
         return ['ts' => null, 'tz' => $tzLabel];
     }
 
-    private static function normalizeTz($tzArg)
+    private static function normalizeTz(string $tzArg): array
     {
         $label = 'UTC';
         if ($tzArg === '') {
@@ -165,7 +165,7 @@ class TimeParser
             $iana = new DateTimeZone($tzArg);
             $label = $tzArg;
             return ['label' => $label, 'offset' => null, 'iana' => $iana];
-        } catch (\Exception $e) {
+        } catch (Exception) {
             // not an IANA id
         }
 
@@ -173,7 +173,7 @@ class TimeParser
         return ['label' => 'UTC', 'offset' => 0, 'iana' => null];
     }
 
-    private static function toUtcTimestamp(DateTime $dt)
+    private static function toUtcTimestamp(DateTime $dt): int
     {
         // Convert DateTime with its current timezone to UTC epoch seconds
         $clone = clone $dt;

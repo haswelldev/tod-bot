@@ -2,18 +2,16 @@
 
 namespace TodBot\Service;
 
-use Discord\Discord;
 use TodBot\Repository\ChannelConfigRepositoryInterface;
 
 class InitHandler
 {
-    private Discord $discord;
     private ChannelConfigRepositoryInterface $channelConfigRepo;
 
     /** @var array<string, array{step: string, locale?: string, reminders?: bool}> */
     private array $pending = [];
 
-    private const LANGUAGES = [
+    private const array LANGUAGES = [
         '1' => ['code' => 'en', 'name' => 'English'],
         '2' => ['code' => 'ru', 'name' => 'Русский'],
         '3' => ['code' => 'uk', 'name' => 'Українська'],
@@ -22,9 +20,8 @@ class InitHandler
         '6' => ['code' => 'pt', 'name' => 'Português'],
     ];
 
-    public function __construct(Discord $discord, ChannelConfigRepositoryInterface $channelConfigRepo)
+    public function __construct(ChannelConfigRepositoryInterface $channelConfigRepo)
     {
-        $this->discord = $discord;
         $this->channelConfigRepo = $channelConfigRepo;
     }
 
@@ -41,7 +38,7 @@ class InitHandler
         if ($existing !== null) {
             $langName = $this->langName($existing['locale'] ?? 'en');
             $message->channel->sendMessage(
-                "✅ This channel is already configured as a ToD tracking channel (language: **{$langName}**)."
+                "✅ This channel is already configured as a ToD tracking channel (language: **$langName**)."
             )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
             return;
         }
@@ -50,7 +47,7 @@ class InitHandler
 
         $lines = [];
         foreach (self::LANGUAGES as $n => $lang) {
-            $lines[] = "{$n}. {$lang['name']} (`{$lang['code']}`)";
+            $lines[] = "$n. {$lang['name']} (`{$lang['code']}`)";
         }
 
         $message->channel->sendMessage(
@@ -81,8 +78,8 @@ class InitHandler
             $langName = $this->langName($locale);
 
             $message->channel->sendMessage(
-                "Language selected: **{$langName}**\n\n"
-                . "Register <#{$channelId}> as a ToD tracking channel?\n"
+                "Language selected: **$langName**\n\n"
+                . "Register <#$channelId> as a ToD tracking channel?\n"
                 . "Reply with `yes` to confirm or `no` to cancel."
             )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
             return;
@@ -128,10 +125,10 @@ class InitHandler
             }
 
             $this->channelConfigRepo->set($channelId, [
-                'guild_id'          => (string) ($message->guild_id ?? ''),
-                'guild_name'        => (string) ($message->channel->guild?->name ?? ''),
-                'channel_name'      => (string) ($message->channel->name ?? ''),
-                'locale'            => $state['locale'],
+                'guild_id'          => $message->guild_id ?? '',
+                'guild_name'        => $message->channel->guild?->name ?? '',
+                'channel_name'      => $message->channel->name ?? '',
+                'locale'            => (string) $state['locale'],
                 'reminders_enabled' => $lower === 'yes',
             ]);
             $this->channelConfigRepo->save();
@@ -142,7 +139,7 @@ class InitHandler
                 : "🔕 Reminders disabled. Use `.remind BossName` for one-time alerts.";
 
             $message->channel->sendMessage(
-                "✅ Channel registered! Use `.tod`, `.window`, `.list`, `.remind` commands to track raid bosses.\n{$reminderStatus}"
+                "✅ Channel registered! Use `.tod`, `.window`, `.list`, `.remind` commands to track raid bosses.\n$reminderStatus"
             )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
         }
     }
