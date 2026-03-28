@@ -135,11 +135,22 @@ class InitHandler
             unset($this->pending[$channelId]);
 
             $reminderStatus = $lower === 'yes'
-                ? "🔔 Reminders enabled."
-                : "🔕 Reminders disabled. Use `.remind BossName` for one-time alerts.";
+                ? "🔔 Reminders **enabled** — the bot will notify this channel when every boss window opens and closes."
+                : "🔕 Reminders **disabled** — use `.remind BossName` to set a one-time alert for a specific boss.";
 
             $message->channel->sendMessage(
-                "✅ Channel registered! Use `.tod`, `.window`, `.list`, `.remind` commands to track raid bosses.\n$reminderStatus"
+                "✅ **Channel registered!**\n"
+                . "$reminderStatus\n\n"
+                . "**Quick-start commands:**\n"
+                . "`.tod Antharas` — record Antharas death right now\n"
+                . "`.tod Antharas 14:30` — record death at 14:30 (today, server time)\n"
+                . "`.tod Antharas 14:30 UTC+2` — record death at 14:30 in a specific timezone\n"
+                . "`.window Antharas` — show the current respawn window\n"
+                . "`.list` — show all tracked bosses and their window status\n"
+                . "`.del Antharas` — remove a boss from tracking\n"
+                . "`.remind Antharas` — set a one-time reminder when Antharas window opens\n"
+                . "`.reminders on` / `.reminders off` — toggle automatic reminders for this channel\n\n"
+                . "Boss names are case-insensitive. Aliased spellings and Cyrillic names are also supported."
             )->then(function () use ($message) { $message->delete(); }, function () use ($message) { $message->delete(); });
         }
     }
