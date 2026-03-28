@@ -12,7 +12,8 @@ RUN composer install \
     --no-dev \
     --prefer-dist \
     --no-progress \
-    --no-interaction
+    --no-interaction \
+    --ignore-platform-reqs
 
 # ---- Runtime: slim PHP CLI image ----
 FROM php:8.4-cli-alpine AS runtime
