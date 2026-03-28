@@ -29,10 +29,27 @@ class CommandHandler
 
     public function __invoke($message): void
     {
-        // Set per-channel locale for all I18n::t() calls in this invocation
-        $locale = $this->channelConfigRepo
-            ? ($this->channelConfigRepo->get((string) $message->channel_id)['locale'] ?? null)
-            : null;
+        // Set per-channel locale for all I18n::t() calls in this invocation.
+        // Also refresh guild/channel name in the config if Discord has renamed them.
+        $locale = null;
+        if ($this->channelConfigRepo) {
+            $channelId = (string) $message->channel_id;
+            $config    = $this->channelConfigRepo->get($channelId);
+            $locale    = $config['locale'] ?? null;
+
+            if ($config !== null) {
+                $freshGuildName   = (string) ($message->channel->guild?->name ?? '');
+                $freshChannelName = (string) ($message->channel->name ?? '');
+                if (($config['guild_name'] ?? '') !== $freshGuildName
+                    || ($config['channel_name'] ?? '') !== $freshChannelName
+                ) {
+                    $config['guild_name']   = $freshGuildName;
+                    $config['channel_name'] = $freshChannelName;
+                    $this->channelConfigRepo->set($channelId, $config);
+                    $this->channelConfigRepo->save();
+                }
+            }
+        }
         I18n::setLocale($locale);
 
         $content = trim($message->content);
