@@ -1,5 +1,3 @@
-version: "3.8"
-
 # MySQL setup for TodBot
 #
 # Usage:
@@ -29,7 +27,8 @@ services:
     restart: unless-stopped
 
   bot:
-    image: haswelldev/cybernapev:latest
+    build: .
+    image: ghcr.io/haswelldev/tod-bot:latest
     container_name: todbot
     depends_on:
       db:

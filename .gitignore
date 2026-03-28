@@ -1,3 +1,4 @@
 data
 .phpunit.result.cache
 vendor
+.env
