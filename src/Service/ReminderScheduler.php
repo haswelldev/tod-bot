@@ -1,23 +1,30 @@
 <?php
 
-namespace NapevBot\Service;
+namespace TodBot\Service;
 
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Parts\Embed\Embed;
-use NapevBot\Repository\TodRepositoryInterface;
+use TodBot\Repository\ChannelConfigRepositoryInterface;
+use TodBot\Repository\TodRepositoryInterface;
 
 class ReminderScheduler
 {
     private Discord $discord;
     private TodRepositoryInterface $repo;
     private BossRegistry $bossRegistry;
+    private ?ChannelConfigRepositoryInterface $channelConfigRepo;
 
-    public function __construct(Discord $discord, TodRepositoryInterface $repo, ?BossRegistry $bossRegistry = null)
-    {
+    public function __construct(
+        Discord $discord,
+        TodRepositoryInterface $repo,
+        ?BossRegistry $bossRegistry = null,
+        ?ChannelConfigRepositoryInterface $channelConfigRepo = null
+    ) {
         $this->discord = $discord;
         $this->repo = $repo;
         $this->bossRegistry = $bossRegistry ?? new BossRegistry();
+        $this->channelConfigRepo = $channelConfigRepo;
     }
 
     public function start(): void
@@ -25,8 +32,9 @@ class ReminderScheduler
         $discord = $this->discord;
         $repo = $this->repo;
         $bossRegistry = $this->bossRegistry;
+        $channelConfigRepo = $this->channelConfigRepo;
 
-        $discord->loop->addPeriodicTimer(60, function () use ($discord, $repo, $bossRegistry) {
+        $discord->loop->addPeriodicTimer(60, function () use ($discord, $repo, $bossRegistry, $channelConfigRepo) {
             $now = time();
             $tods = $repo->all(); // [channelId => [boss => info]]
 
@@ -35,6 +43,12 @@ class ReminderScheduler
 
                 $channel = $discord->getChannel($channelId);
                 if (!$channel) { continue; }
+
+                // Use this channel's configured locale for reminder messages
+                $locale = $channelConfigRepo
+                    ? ($channelConfigRepo->get($channelId)['locale'] ?? null)
+                    : null;
+                I18n::setLocale($locale);
 
                 foreach ($byBoss as $boss => $info) {
                     $tod = $info['tod'] ?? 0;

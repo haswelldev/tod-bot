@@ -1,6 +1,6 @@
 <?php
 
-namespace NapevBot\Service;
+namespace TodBot\Service;
 
 use Symfony\Component\Yaml\Yaml;
 

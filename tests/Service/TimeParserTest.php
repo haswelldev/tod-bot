@@ -1,6 +1,6 @@
 <?php
 
-use NapevBot\Service\TimeParser;
+use TodBot\Service\TimeParser;
 use PHPUnit\Framework\TestCase;
 
 class TimeParserTest extends TestCase

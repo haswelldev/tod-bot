@@ -1,27 +1,40 @@
 <?php
 
-namespace NapevBot\Service;
+namespace TodBot\Service;
 
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Parts\Embed\Embed;
-use NapevBot\Repository\TodRepositoryInterface;
+use TodBot\Repository\ChannelConfigRepositoryInterface;
+use TodBot\Repository\TodRepositoryInterface;
 
 class CommandHandler
 {
     private Discord $discord;
     private TodRepositoryInterface $repo;
     private BossRegistry $bossRegistry;
+    private ?ChannelConfigRepositoryInterface $channelConfigRepo;
 
-    public function __construct(Discord $discord, TodRepositoryInterface $repo, ?BossRegistry $bossRegistry = null)
-    {
+    public function __construct(
+        Discord $discord,
+        TodRepositoryInterface $repo,
+        ?BossRegistry $bossRegistry = null,
+        ?ChannelConfigRepositoryInterface $channelConfigRepo = null
+    ) {
         $this->discord = $discord;
         $this->repo = $repo;
         $this->bossRegistry = $bossRegistry ?? new BossRegistry();
+        $this->channelConfigRepo = $channelConfigRepo;
     }
 
     public function __invoke($message): void
     {
+        // Set per-channel locale for all I18n::t() calls in this invocation
+        $locale = $this->channelConfigRepo
+            ? ($this->channelConfigRepo->get((string) $message->channel_id)['locale'] ?? null)
+            : null;
+        I18n::setLocale($locale);
+
         $content = trim($message->content);
         $parts = explode(' ', $content);
         $cmd = strtolower($parts[0]);

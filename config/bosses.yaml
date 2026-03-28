@@ -18,6 +18,7 @@ bosses:
 
   orfen:
     respawn: 33
+    aliases: [orphan]
     random: 4
 
   zaken:

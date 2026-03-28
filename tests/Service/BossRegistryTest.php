@@ -1,6 +1,6 @@
 <?php
 
-use NapevBot\Service\BossRegistry;
+use TodBot\Service\BossRegistry;
 use PHPUnit\Framework\TestCase;
 
 class BossRegistryTest extends TestCase

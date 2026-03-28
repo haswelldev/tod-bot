@@ -1,6 +1,6 @@
 <?php
 
-namespace NapevBot\Service;
+namespace TodBot\Service;
 
 use DateTime;
 use DateTimeZone;

@@ -1,7 +1,7 @@
 <?php
 
-use NapevBot\Repository\SqliteTodRepository;
-use NapevBot\Service\CommandHandler;
+use TodBot\Repository\SqliteTodRepository;
+use TodBot\Service\CommandHandler;
 use PHPUnit\Framework\TestCase;
 use React\Promise\PromiseInterface;
 

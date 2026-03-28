@@ -1,7 +1,7 @@
 <?php
 
-use NapevBot\Service\CommandHandler;
-use NapevBot\Repository\TodRepositoryInterface;
+use TodBot\Service\CommandHandler;
+use TodBot\Repository\TodRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 use React\Promise\PromiseInterface;
 

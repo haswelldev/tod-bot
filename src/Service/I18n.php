@@ -1,6 +1,6 @@
 <?php
 
-namespace NapevBot\Service;
+namespace TodBot\Service;
 
 use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Translator;
@@ -8,6 +8,16 @@ use Symfony\Component\Translation\Translator;
 class I18n
 {
     private static ?Translator $translator = null;
+    private static ?string $overrideLocale = null;
+
+    /**
+     * Temporarily override the active locale (e.g. per-channel locale).
+     * Pass null to revert to the translator's default locale.
+     */
+    public static function setLocale(?string $locale): void
+    {
+        self::$overrideLocale = $locale;
+    }
 
     public static function translator(): Translator
     {
@@ -78,6 +88,6 @@ class I18n
 
     public static function t($key, array $params = []): string
     {
-        return self::translator()->trans($key, $params);
+        return self::translator()->trans($key, $params, null, self::$overrideLocale);
     }
 }

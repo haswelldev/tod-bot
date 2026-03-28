@@ -1,6 +1,6 @@
 <?php
 
-namespace NapevBot\Repository;
+namespace TodBot\Repository;
 
 interface TodRepositoryInterface
 {

@@ -23,21 +23,37 @@ php bin/bot.php
 docker compose up -d
 ```
 
-Required environment variables: `DISCORD_TOKEN` (required), `TOD_STORAGE` (`json`|`sqlite`, default `json`), `TOD_SQLITE` (path, default `./data/tods.sqlite`), `BOT_LOCALE` (`en`|`ru`|`fr`|`el`|`pt`|`uk`, default `en`).
+**Storage-independent variables:** `DISCORD_TOKEN` (required), `TOD_STORAGE` (`json`|`sqlite`|`mysql`, default `json`), `BOT_LOCALE` (`en`|`ru`|`fr`|`el`|`pt`|`uk`, default `en`), `TOD_WINDOW_START` (hours, default `12`), `TOD_WINDOW_RANDOM` (hours, default `9`), `BOSS_CONFIG` (path to bosses.yaml, default `config/bosses.yaml`).
+
+**SQLite:** `TOD_SQLITE` (path, default `./data/tods.sqlite`).
+
+**MySQL:** `MYSQL_HOST` (default `127.0.0.1`), `MYSQL_PORT` (default `3306`), `MYSQL_DATABASE` (default `todbot`), `MYSQL_USER` (default `todbot`), `MYSQL_PASSWORD`. Tables are created automatically on startup.
 
 ## Architecture
 
-NapevBot is a Discord bot (PHP 8.4, [DiscordPHP](https://github.com/discord-php/DiscordPHP)) that tracks raid boss Time of Death (ToD) for Lineage 2 and schedules reminders when respawn windows open/close (ToD+12h → ToD+21h).
+TodBot is a Discord bot (PHP 8.4, [DiscordPHP](https://github.com/discord-php/DiscordPHP)) that tracks raid boss Time of Death (ToD) for Lineage 2 and schedules reminders when respawn windows open/close (ToD+12h → ToD+21h).
 
 ### Entry point & wiring (`bin/bot.php` → `src/Bot/DiscordBot.php`)
 
-`bin/bot.php` reads `Config`, selects a repository implementation, and hands both to `DiscordBot`. `DiscordBot` connects to Discord via the ReactPHP event loop and wires two handlers on the `init` event:
-- **`CommandHandler`** — registered as a callback on each incoming `message` event
-- **`ReminderScheduler`** — started as a 60-second repeating timer
+`bin/bot.php` reads `Config`, selects a repository implementation (both ToD and channel config repos), and passes them to `DiscordBot`. `DiscordBot` connects to Discord via the ReactPHP event loop. On `init` it wires a message router and starts the reminder timer.
+
+**Message routing** (inside `DiscordBot.wireEvents()`):
+1. `.init` → `InitHandler` (works on any channel, registered or not)
+2. Channel has a pending init conversation → `InitHandler`
+3. Channel is not registered → silently ignored
+4. Registered channel → `CommandHandler`
+
+### Channel registration (`src/Service/InitHandler.php`)
+
+`.init` starts a two-step conversation to register a channel:
+1. Bot sends language menu; user replies with number or code (`1`–`6` or `en`, `ru`, `uk`, `fr`, `el`, `pt`)
+2. Bot asks for confirmation; user replies `yes` or `no`
+
+On confirmation, channel config (`guild_id`, `locale`) is written to `ChannelConfigRepositoryInterface`. In-memory pending state tracks which channels are mid-conversation.
 
 ### Command handling (`src/Service/CommandHandler.php`)
 
-Invoked on every Discord message. Parses `.`-prefixed commands (`.tod`, `.window`/`.w`, `.del`, `.list`/`.ls`/`.all`) plus Cyrillic aliases, then delegates to private handler methods. Each handler reads/writes via the injected repository and responds with a Discord embed. User command messages are auto-deleted.
+Only reached for registered channels (enforced by router). Parses `.`-prefixed commands (`.tod`, `.window`/`.w`, `.del`, `.list`/`.ls`/`.all`) plus Cyrillic aliases. At the top of `__invoke()`, sets `I18n::setLocale()` to the channel's configured locale so all subsequent `I18n::t()` calls use the right language. User command messages are auto-deleted.
 
 ### Reminder scheduler (`src/Service/ReminderScheduler.php`)
 
@@ -45,11 +61,21 @@ Runs every 60 seconds. Iterates all stored ToDs, checks window boundaries, and p
 
 ### Repository pattern (`src/Repository/`)
 
-`TodRepositoryInterface` defines `all()`, `allByChannel()`, `get()`, `set()`, `delete()`, `save()`. Two implementations:
-- **`JsonTodRepository`** — JSON file (`./data/tods.json`); auto-migrates old flat format to per-channel structure
-- **`SqliteTodRepository`** — SQLite (`./data/tods.sqlite`); auto-creates schema; `save()` is a no-op (immediate writes)
+**ToD data** — `TodRepositoryInterface`: `all()`, `allByChannel()`, `get()`, `set()`, `delete()`, `save()`.
+- **`JsonTodRepository`** — `./data/tods.json`; auto-migrates old flat format to per-channel structure
+- **`SqliteTodRepository`** — `./data/tods.sqlite`; auto-creates schema; `save()` is a no-op
+- **`MysqlTodRepository`** — `tods` table; auto-creates schema; upserts via `ON DUPLICATE KEY UPDATE`; uses persistent PDO connection
 
-Data shape per entry: `['tod' => int, 'channel' => string, 'start_reminded' => bool, 'end_reminded' => bool]`
+Data shape: `['tod' => int, 'channel' => string, 'start_reminded' => bool, 'end_reminded' => bool]`
+
+**Channel config** — `ChannelConfigRepositoryInterface`: `get()`, `set()`, `delete()`, `save()`.
+- **`JsonChannelConfigRepository`** — `./data/channels.json`
+- **`SqliteChannelConfigRepository`** — same SQLite file as ToD, separate `channels` table (auto-created)
+- **`MysqlChannelConfigRepository`** — `channels` table; auto-creates schema; upserts via `ON DUPLICATE KEY UPDATE`
+
+Data shape: `['guild_id' => string, 'locale' => string]` keyed by `channel_id`.
+
+**MySQL setup with Docker:** `docker compose -f docker-compose.mysql.yml up -d` (set `DISCORD_TOKEN` env var first). See `docker-compose.mysql.yml` — change the default passwords (`changeme`, `changeme_root`) before production use. For external MySQL, set the `MYSQL_*` env vars and use `TOD_STORAGE=mysql` without Docker Compose.
 
 ### Time utilities
 
@@ -58,4 +84,4 @@ Data shape per entry: `['tod' => int, 'channel' => string, 'start_reminded' => b
 
 ### Internationalization (`src/Service/I18n.php`)
 
-Wraps Symfony Translation. Translation files live in `translations/messages.LOCALE.php`. Call `I18n::t('key', ['param' => $val])` anywhere. Locale set via `BOT_LOCALE` env var.
+Wraps Symfony Translation. Translation files live in `translations/messages.LOCALE.php`. Call `I18n::t('key', ['param' => $val])` anywhere. Default locale from `BOT_LOCALE` env var. Per-channel locale is applied via `I18n::setLocale($locale)` before each command handler invocation and before each channel's reminder batch — Symfony's `Translator::trans()` receives the override locale as its 4th argument.

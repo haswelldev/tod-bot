@@ -1,6 +1,6 @@
 <?php
 
-use NapevBot\Repository\SqliteTodRepository;
+use TodBot\Repository\SqliteTodRepository;
 use PHPUnit\Framework\TestCase;
 
 class SqliteTodRepositoryTest extends TestCase

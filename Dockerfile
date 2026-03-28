@@ -19,11 +19,11 @@ FROM php:8.4-cli-alpine AS runtime
 
 WORKDIR /app
 
-# Set UTC timezone to match app expectations and install sqlite extensions
+# Set UTC timezone; install SQLite and MySQL PDO extensions
 ENV TZ=UTC
 RUN apk add --no-cache tzdata sqlite sqlite-dev && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
-    docker-php-ext-install pdo pdo_sqlite && \
+    docker-php-ext-install pdo pdo_sqlite pdo_mysql && \
     mkdir data
 
 # Copy application source

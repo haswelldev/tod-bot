@@ -3,7 +3,7 @@ version: "3.8"
 services:
   bot:
     image: haswelldev/cybernapev:latest
-    container_name: napevbot
+    container_name: todbot
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - TOD_STORAGE=sqlite

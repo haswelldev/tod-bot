@@ -1,0 +1,49 @@
+version: "3.8"
+
+# MySQL setup for TodBot
+#
+# Usage:
+#   export DISCORD_TOKEN=your_token_here
+#   docker compose -f docker-compose.mysql.yml up -d
+#
+# The MySQL database and tables are created automatically on first start.
+# Data is stored in the named volume "mysql_data" and survives container restarts.
+
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: todbot_db
+    environment:
+      MYSQL_ROOT_PASSWORD: changeme_root
+      MYSQL_DATABASE: todbot
+      MYSQL_USER: todbot
+      MYSQL_PASSWORD: changeme
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-utodbot", "-pchangeme"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  bot:
+    image: haswelldev/cybernapev:latest
+    container_name: todbot
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - TOD_STORAGE=mysql
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=todbot
+      - MYSQL_USER=todbot
+      - MYSQL_PASSWORD=changeme
+      - TZ=UTC
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

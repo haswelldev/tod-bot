@@ -3,10 +3,14 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use NapevBot\Bot\DiscordBot;
-use NapevBot\Config;
-use NapevBot\Repository\JsonTodRepository;
-use NapevBot\Repository\SqliteTodRepository;
+use TodBot\Bot\DiscordBot;
+use TodBot\Config;
+use TodBot\Repository\JsonChannelConfigRepository;
+use TodBot\Repository\JsonTodRepository;
+use TodBot\Repository\MysqlChannelConfigRepository;
+use TodBot\Repository\MysqlTodRepository;
+use TodBot\Repository\SqliteChannelConfigRepository;
+use TodBot\Repository\SqliteTodRepository;
 
 $config = new Config();
 
@@ -15,12 +19,21 @@ if (!$config->getToken()) {
     exit(1);
 }
 
-// Select storage backend based on env TOD_STORAGE (json|sqlite)
-if ($config->getStorageDriver() === 'sqlite') {
-    $repo = new SqliteTodRepository($config->getSqliteFile());
+// Select storage backend based on env TOD_STORAGE (json|sqlite|mysql)
+$driver = $config->getStorageDriver();
+if ($driver === 'mysql') {
+    $dsn               = $config->getMysqlDsn();
+    $user              = $config->getMysqlUser();
+    $password          = $config->getMysqlPassword();
+    $repo              = new MysqlTodRepository($dsn, $user, $password);
+    $channelConfigRepo = new MysqlChannelConfigRepository($dsn, $user, $password);
+} elseif ($driver === 'sqlite') {
+    $repo              = new SqliteTodRepository($config->getSqliteFile());
+    $channelConfigRepo = new SqliteChannelConfigRepository($config->getSqliteFile());
 } else {
-    $repo = new JsonTodRepository($config->getTodFile());
+    $repo              = new JsonTodRepository($config->getTodFile());
+    $channelConfigRepo = new JsonChannelConfigRepository($config->getChannelsFile());
 }
 
-$bot = new DiscordBot($config, $repo);
+$bot = new DiscordBot($config, $repo, $channelConfigRepo);
 $bot->run();

@@ -1,6 +1,6 @@
 <?php
 
-namespace NapevBot;
+namespace TodBot;
 
 class Config
 {
@@ -11,6 +11,10 @@ class Config
     private int $defaultWindowStart;
     private int $defaultWindowRandom;
     private string $bossConfigPath;
+    private string $channelsFile;
+    private string $mysqlDsn;
+    private string $mysqlUser;
+    private string $mysqlPassword;
 
     public function __construct($token = null, $todFile = null)
     {
@@ -34,6 +38,15 @@ class Config
 
         $envBossConfig = getenv('BOSS_CONFIG');
         $this->bossConfigPath = $envBossConfig ?: dirname(__DIR__) . '/config/bosses.yaml';
+
+        $this->channelsFile = dirname(__DIR__) . '/data/channels.json';
+
+        $host     = getenv('MYSQL_HOST')     ?: '127.0.0.1';
+        $port     = (int) (getenv('MYSQL_PORT') ?: 3306);
+        $dbname   = getenv('MYSQL_DATABASE') ?: 'todbot';
+        $this->mysqlDsn      = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
+        $this->mysqlUser     = getenv('MYSQL_USER')     ?: 'todbot';
+        $this->mysqlPassword = getenv('MYSQL_PASSWORD') ?: '';
     }
 
     public function getToken()
@@ -69,5 +82,25 @@ class Config
     public function getBossConfigPath(): string
     {
         return $this->bossConfigPath;
+    }
+
+    public function getChannelsFile(): string
+    {
+        return $this->channelsFile;
+    }
+
+    public function getMysqlDsn(): string
+    {
+        return $this->mysqlDsn;
+    }
+
+    public function getMysqlUser(): string
+    {
+        return $this->mysqlUser;
+    }
+
+    public function getMysqlPassword(): string
+    {
+        return $this->mysqlPassword;
     }
 }
